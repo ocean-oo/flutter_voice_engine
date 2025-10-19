@@ -55,15 +55,15 @@ public class AudioManager {
             try session.setInputGain(1.0)
             try session.setActive(true, options: [.notifyOthersOnDeactivation])
             let appliedOptions = session.categoryOptions.rawValue
-            print("Audio session configured: sampleRate=\(session.sampleRate), channels=\(session.outputNumberOfChannels), inputGain=\(session.inputGain), options=\(appliedOptions), bufferDuration=\(session.ioBufferDuration)")
-            print("Expected options: defaultToSpeaker=8, mixWithOthers=32, allowBluetoothA2DP=4, Total=44")
+             logger.i("Audio session configured: sampleRate=\(session.sampleRate), channels=\(session.outputNumberOfChannels), inputGain=\(session.inputGain), options=\(appliedOptions), bufferDuration=\(session.ioBufferDuration)")
+             logger.i("Expected options: defaultToSpeaker=8, mixWithOthers=32, allowBluetoothA2DP=4, Total=44")
             if appliedOptions != 44 {
-                print("Warning: Options mismatch, expected 44, got \(appliedOptions)")
+                 logger.i("Warning: Options mismatch, expected 44, got \(appliedOptions)")
                 try session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .mixWithOthers, .allowBluetoothA2DP])
-                print("Fallback applied: options=\(session.categoryOptions.rawValue)")
+                 logger.i("Fallback applied: options=\(session.categoryOptions.rawValue)")
             }
         } catch {
-            print("Failed to configure audio session: \(error)")
+             logger.i("Failed to configure audio session: \(error)")
             errorPublisher.send("Audio session error: \(error.localizedDescription)")
         }
 
@@ -97,7 +97,7 @@ public class AudioManager {
                 self?.eventSink?(["type": "error", "message": "Failed to initialize audio converters"])
             }
         } else {
-            print("Converters initialized: recording=\(inputFormat)->\(webSocketFormat), playback=\(webSocketFormat)->\(audioFormat)")
+             logger.i("Converters initialized: recording=\(inputFormat)->\(webSocketFormat), playback=\(webSocketFormat)->\(audioFormat)")
         }
     }
 
@@ -112,12 +112,12 @@ public class AudioManager {
             try session.setActive(true)
             if enableAEC {
                 try inputNode.setVoiceProcessingEnabled(true)
-                print("Voice processing enabled for AEC")
+                 logger.i("Voice processing enabled for AEC")
             }
             try audioEngine.start()
-            print("Audio engine started with outputFormat=\(audioFormat)")
+             logger.i("Audio engine started with outputFormat=\(audioFormat)")
         } catch {
-            print("Failed to start audio engine or enable AEC: \(error)")
+             logger.i("Failed to start audio engine or enable AEC: \(error)")
             errorPublisher.send("Engine error: \(error.localizedDescription)")
             DispatchQueue.main.async { [weak self] in
                 self?.eventSink?(["type": "error", "message": "Engine error: \(error.localizedDescription)"])
@@ -128,10 +128,10 @@ public class AudioManager {
     public func emitMusicIsPlaying() {
         DispatchQueue.main.async { [weak self] in
             guard let sink = self?.eventSink else {
-                print("eventSink is nil, cannot send music state")
+                 logger.i("eventSink is nil, cannot send music state")
                 return
             }
-            print("Emitting music state: \(self?.musicIsPlaying ?? false)")
+             logger.i("Emitting music state: \(self?.musicIsPlaying ?? false)")
             sink(["type": "music_state", "state": self?.musicIsPlaying ?? false])
         }
     }
@@ -173,7 +173,7 @@ public class AudioManager {
 
 
     public func stopEmittingMusicPosition() {
-        print("Stopping music position timer")
+         logger.i("Stopping music position timer")
         musicPositionTimer?.invalidate()
         musicPositionTimer = nil
     }
@@ -196,13 +196,13 @@ public class AudioManager {
                 do {
                     try FileManager.default.moveItem(at: tempURL, to: URL(fileURLWithPath: localPath))
                     completion(localPath)
-                    print("Downloaded track: \(urlStr) to \(localPath)")
+                     logger.i("Downloaded track: \(urlStr) to \(localPath)")
                 } catch {
-                    print("Failed to move downloaded file: \(error)")
+                     logger.i("Failed to move downloaded file: \(error)")
                     completion(nil)
                 }
             } else {
-                print("Failed to download music from \(urlStr): \(error?.localizedDescription ?? "Unknown error")")
+                 logger.i("Failed to download music from \(urlStr): \(error?.localizedDescription ?? "Unknown error")")
                 DispatchQueue.main.async { [weak self] in
                     self?.eventSink?(["type": "error", "message": "Failed to download music from \(urlStr)"])
                 }
@@ -279,11 +279,11 @@ public class AudioManager {
 
     public func startRecording() -> AnyPublisher<Data, Never> {
         guard !isRecording else {
-            print("Already recording")
+             logger.i("Already recording")
             return audioChunkPublisher.eraseToAnyPublisher()
         }
         isRecording = true
-        print("Starting recording with format=\(webSocketFormat)")
+         logger.i("Starting recording with format=\(webSocketFormat)")
         installRecordingTap()
         return audioChunkPublisher.eraseToAnyPublisher()
     }
@@ -292,14 +292,14 @@ public class AudioManager {
         guard isRecording else { return }
         isRecording = false
         inputNode.removeTap(onBus: 0)
-        print("Recording stopped")
+         logger.i("Recording stopped")
     }
 
     public func playAudioChunk(audioData: Data) throws {
         guard audioEngine.isRunning, let converter = playbackConverter else {
             throw NSError(domain: "AudioManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Engine or converter unavailable"])
         }
-        print("Received playback chunk, size: \(audioData.count) bytes")
+         logger.i("Received playback chunk, size: \(audioData.count) bytes")
         let frameCount = AVAudioFrameCount(audioData.count / (MemoryLayout<Int16>.size * Int(self.webSocketFormat.channelCount)))
         guard let inputBuffer = AVAudioPCMBuffer(pcmFormat: webSocketFormat, frameCapacity: frameCount) else {
             throw NSError(domain: "AudioManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Failed to create input buffer"])
@@ -326,14 +326,14 @@ public class AudioManager {
         playerNode.scheduleBuffer(outputBuffer, completionHandler: nil)
         if !playerNode.isPlaying {
             playerNode.play()
-            print("Started playback")
+             logger.i("Started playback")
         }
     }
 
     public func stopPlayback() {
         playerNode.stop()
         playerNode.reset()
-        print("Playback stopped")
+         logger.i("Playback stopped")
     }
 
     
@@ -341,7 +341,7 @@ public class AudioManager {
     public func shutdownBot() {
         stopRecording()
         stopPlayback()
-        print("Bot stopped, music continues if playing.")
+         logger.i("Bot stopped, music continues if playing.")
     }
 
     public func shutdownAll() {
@@ -360,26 +360,26 @@ public class AudioManager {
         do {
             try AVAudioSession.sharedInstance().setActive(false)
         } catch {
-            print("Failed to deactivate audio session: \(error)")
+             logger.i("Failed to deactivate audio session: \(error)")
             DispatchQueue.main.async { [weak self] in
                 self?.eventSink?(["type": "error", "message": "Failed to deactivate audio session: \(error.localizedDescription)"])
             }
         }
-        print("AudioManager shutdown (bot + music)")
+         logger.i("AudioManager shutdown (bot + music)")
     }
 
     public func handleConfigurationChange() {
-        print("Audio engine configuration changed")
+         logger.i("Audio engine configuration changed")
         if !audioEngine.isRunning {
-            print("Engine stopped, attempting to restart")
+             logger.i("Engine stopped, attempting to restart")
             do {
                 try audioEngine.start()
                 if isRecording {
-                    print("Reinstalling recording tap")
+                     logger.i("Reinstalling recording tap")
                     installRecordingTap()
                 }
             } catch {
-                print("Failed to restart audio engine: \(error)")
+                 logger.i("Failed to restart audio engine: \(error)")
                 errorPublisher.send("Engine restart failed: \(error.localizedDescription)")
                 DispatchQueue.main.async { [weak self] in
                     self?.eventSink?(["type": "error", "message": "Engine restart failed: \(error.localizedDescription)"])

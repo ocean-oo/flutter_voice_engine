@@ -147,7 +147,7 @@ public class FlutterVoiceEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHan
 
     private func initialize(audioConfig: [String: Any], sessionConfig: [String: Any], processors: [[String: Any]], result: @escaping FlutterResult) {
         if isInitialized {
-            print("AudioManager already initialized. Skipping re-init.")
+             logger.i("AudioManager already initialized. Skipping re-init.")
             result(nil)
             return
         }
@@ -179,7 +179,7 @@ public class FlutterVoiceEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHan
         audioManager.eventSink = eventSink
         audioManager.setupEngine()
         isInitialized = true
-        print("Plugin: Initialization complete")
+         logger.i("Plugin: Initialization complete")
         result(nil)
     }
 
@@ -187,7 +187,7 @@ public class FlutterVoiceEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHan
         audioManager.startRecording().sink { [weak self] audioData in
             DispatchQueue.main.async {
                 guard let sink = self?.eventSink else {
-                    print("Plugin: eventSink is nil, cannot send audio chunk")
+                     logger.i("Plugin: eventSink is nil, cannot send audio chunk")
                     return
                 }
                 sink(["type": "audio_chunk", "data": FlutterStandardTypedData(bytes: audioData)])
@@ -234,13 +234,13 @@ public class FlutterVoiceEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHan
     }
 
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        print("Plugin: Setting up event stream")
+         logger.i("Plugin: Setting up event stream")
         eventSink = events
         audioManager.eventSink = events
         audioManager.startRecording().sink { [weak self] audioData in
             DispatchQueue.main.async {
                 guard let sink = self?.eventSink else {
-                    print("Plugin: eventSink is nil, cannot send audio chunk")
+                     logger.i("Plugin: eventSink is nil, cannot send audio chunk")
                     return
                 }
                 sink(["type": "audio_chunk", "data": FlutterStandardTypedData(bytes: audioData)])
@@ -248,14 +248,14 @@ public class FlutterVoiceEnginePlugin: NSObject, FlutterPlugin, FlutterStreamHan
         }.store(in: &cancellables)
         audioManager.startEmittingMusicPosition()
         DispatchQueue.main.async {
-            print("Plugin: Sending initial music state: \(self.audioManager.musicIsPlaying)")
+             logger.i("Plugin: Sending initial music state: \(self.audioManager.musicIsPlaying)")
             events(["type": "music_state", "state": self.audioManager.musicIsPlaying])
         }
         return nil
     }
 
     public func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        print("Plugin: Cancelling event stream")
+         logger.i("Plugin: Cancelling event stream")
         eventSink = nil
         audioManager.eventSink = nil
         audioManager.stopRecording()

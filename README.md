@@ -98,26 +98,26 @@ void main() async {
 
     // Listen for audio chunks
     voiceEngine.audioChunkStream.listen((audioBytes) {
-      print('Audio chunk: ${audioBytes.sublist(0, 20)}...');
+       logger.i('Audio chunk: ${audioBytes.sublist(0, 20)}...');
       // Send Uint8List (raw PCM Int16, 24kHz) to backend via WebSocket
     });
 
     // Listen for errors
     voiceEngine.errorStream.listen((error) {
-      print('Error: $error');
+       logger.i('Error: $error');
     });
 
     // Listen for background music updates
     voiceEngine.backgroundMusicPositionStream.listen((pos) {
-      print('Music position: $pos');
+       logger.i('Music position: $pos');
     });
 
     voiceEngine.backgroundMusicDurationStream.listen((dur) {
-      print('Music duration: $dur');
+       logger.i('Music duration: $dur');
     });
 
     voiceEngine.backgroundMusicIsPlayingStream.listen((isPlaying) {
-      print('Is music playing? $isPlaying');
+       logger.i('Is music playing? $isPlaying');
     });
 
     // Start recording
@@ -145,7 +145,7 @@ void main() async {
     // Cleanup
     await voiceEngine.shutdownAll();
   } catch (e) {
-    print('Error: $e');
+     logger.i('Error: $e');
   }
 }
 ```

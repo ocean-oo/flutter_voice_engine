@@ -33,3 +33,6 @@ example/lib/session/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+
+# FVM Version Cache
+.fvm/
